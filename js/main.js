@@ -17,6 +17,7 @@ var GameState = {
       
     this.RUNNING_SPEED = 180;
     this.JUMPING_SPEED = 550;
+      
   },
 
   //load the game assets before the game starts
@@ -76,7 +77,7 @@ var GameState = {
     this.player.anchor.setTo(0.5);
     this.player.animations.add('walking', [0, 1, 2, 1], 6, true);
     this.game.physics.arcade.enable(this.player);
-    this.player.customParams = {};
+    this.player.customParams = {alive:true};
     this.player.body.collideWorldBounds = true;
       
     this.game.camera.follow(this.player);
@@ -99,7 +100,18 @@ var GameState = {
     this.game.physics.arcade.overlap(this.player, this.fires, this.killPlayer);
     this.game.physics.arcade.overlap(this.player, this.barrels, this.killPlayer);
     this.game.physics.arcade.overlap(this.player, this.goal, this.win);
-      
+    
+    if(!this.player.customParams.alive) {
+        this.player.body.moves = false;
+        this.player.frame = 3;
+        
+        var playerFall = this.game.add.tween(this.player);
+        playerFall.to({y:1500,angle:'+720'},1500);
+        playerFall.onComplete.add(function(){
+            game.state.start('GameState');
+        },this);
+        playerFall.start();
+    }
     this.player.body.velocity.x = 0;
       
     if(this.cursors.left.isDown || this.player.customParams.isMovingLeft) {
@@ -123,6 +135,19 @@ var GameState = {
     this.barrels.forEach(function(element){
         if(element.x < 10  && element.y > 600) {
             element.kill();
+        }
+        var barrelRotate = this.game.add.tween(element);
+        barrelRotate.to({angle:'+3600'},10000);
+        barrelRotate.start();
+        if(element.x >= 350) {
+            barrelRotate.stop();
+            barrelRotate.to({angle:'-3600'},10000);
+            barrelRotate.start();
+        }
+        if(element.x <=15){
+            barrelRotate.stop();
+            barrelRotate.to({angle:'+3600'},10000);
+            barrelRotate.start();
         }
     },this);
   },
@@ -173,11 +198,9 @@ var GameState = {
       },this);
   },
   killPlayer: function(player,fire) {
-      console.log('ouch');
-      game.state.start('GameState');
+      player.customParams.alive = false;
   },
   win: function(player,goal) {
-      console.log('win');
       game.state.start('GameState');
   },
   createBarrel: function() {
@@ -190,6 +213,7 @@ var GameState = {
       
       barrel.body.collideWorldBounds = true;
       barrel.body.bounce.set(1, 0);
+      barrel.anchor.setTo(0.5);
       
       barrel.reset(this.levelData.goal.x,this.levelData.goal.y);
       barrel.body.velocity.x = this.levelData.barrelSpeed;
